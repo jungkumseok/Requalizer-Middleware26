@@ -67,9 +67,9 @@ generate-mttr-table.py
 ```
 
 To run any of the scripts, we must activate the Python virtual environment. Activate `venv`:
-```
-# CWD: /root/requalizer/scripts/presentation
-source .venv/bin/activate
+```bash
+# CWD: /root/requalizer/scripts/experiment
+source ../presentation/.venv/bin/activate
 ```
 
 Then, run the scripts as the following:
@@ -101,10 +101,9 @@ You can compare the figures and tables you produced with the original ones inclu
 
 Before running the full system experiments on the test cluster, you can examine Requalizer's core algorithms using the Python reference implementations in this repository. These scripts extract the core algorithmic logic out of the middleware (written in C#), allowing you to examine the contributions without needing to spin up a test cluster. 
 
-The reference scripts are located in `/root/requalizer/scripts/experiment/`. To run them, activate the Python virtual environment:
+The reference scripts are located in `/root/requalizer/scripts/experiment/`. To run them, activate the Python virtual environment (if you have not already):
 ```bash
-# CWD: /root
-cd requalizer/scripts/experiment
+# CWD: /root/requalizer/scripts/experiment
 source ../presentation/.venv/bin/activate
 ```
 
