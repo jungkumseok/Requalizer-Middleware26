@@ -45,6 +45,39 @@ docker run -it --name requalizer-exp --mount type=bind,source=/home/user/requali
 ```
 
 
+### Examining the Core Algorithms (Reference Implementations)
+
+Before running the full system experiments on the OneOS cluster, you can examine the mathematical formulations of Requalizer's core algorithms using the provided Python reference implementations. These scripts extract the core algorithmic logic out of the C# middleware, allowing reviewers to easily examine and interact with the system without needing to spin up the entire cluster. 
+
+The reference scripts are located in `/root/requalizer/scripts/experiment/`. To run them, activate the Python virtual environment:
+```bash
+# CWD: /root
+cd requalizer/scripts/experiment
+source ../presentation/.venv/bin/activate
+```
+
+**1. Workload Placement / Scheduling (`cp-scheduler.py`)**
+This script demonstrates the dataflow-aware workload placement strategy (Section 4.3). It uses Google OR-Tools Constraint Programming to map predictive services to physical hosts, optimizing for bandwidth and latency while strictly adhering to DIFT isolation tags and group anti-affinity.
+```bash
+# Run the scheduler for a 16-node cluster with 10 parallel services
+python cp-scheduler.py --hosts 16 --services 10
+```
+
+**2. DIFT-Aware Load Balancing (`load-balancer-advanced.py`)**
+This script implements the Mixed-Integer Linear Program (MILP) formulation of the DIFT-aware Load Balancer (Algorithm 1, Section 4.4). It calculates routing flow to guarantee minimum replica availability ($c$) for failure tolerance without violating DIFT rules.
+```bash
+# Calculate flow matrices ensuring a minimum redundancy of 2 active routes per label
+python load-balancer-advanced.py --redundancy 2
+```
+
+**3. Dataflow & Correctness Simulator (`dift-simulator.py`)**
+This discrete-event simulator validates Requalizer's routing mechanisms and label propagation (RQ2: Correctness). It models the full application topologies (e.g., AAL, FD) and evaluates different node architectures under dynamic conditions, allowing you to observe the exact routing decisions and dataflow behavior.
+```bash
+# Simulate 10,000 messages through the AAL topology with DIFT-aware routing
+python dift-simulator.py --app AAL --mode aware --messages 10000
+```
+
+
 ### Reproducing the Experiments
 
 Assuming that we are now in the container environment, this section will walk through the steps for reproducing the results from the paper.
