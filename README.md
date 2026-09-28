@@ -80,18 +80,18 @@ python generate-violations-table.py /root/requalizer/data/experiment-1/violation
 python generate-mttr-table.py /root/requalizer/data/experiment-2/mttr-data.csv
 ```
 
-The above scripts should produce the figures and tables in the `/root/output` directory. The files will be named as below (`YYYYmmdd_HHMMSS` replaced with the appropriate timestamps):
+The above scripts should produce the figures and tables in the `/root/requalizer/scripts/presentation` directory. The files will be named as below:
 ```
-latency-histogram.YYYYmmdd_HHMMSS.png
-throughput-snapshot.YYYYmmdd_HHMMSS.png
-violations-table.YYYYmmdd_HHMMSS.txt
-mttr-table.YYYYmmdd_HHMMSS.txt
+latency-plot.pdf
+throughput-plot.pdf
+violations-table.txt
+mttr-table.txt
 ```
 
 If you have mounted a host directory, you should be able to see these files in the host machine. If not, you will need to `docker cp` the files into the host machine.
 ```
 # From the host machine
-docker cp requalizer-exp:/root/output/latency-histogram.YYYYmmdd_HHMMSS.png /path/on/my/machine/latency-histogram.png
+docker cp requalizer-exp:/root/requalizer/scripts/presentation/latency-histogram.YYYYmmdd_HHMMSS.png /path/on/my/machine/latency-histogram.png
 ```
 
 You can compare the figures and tables you produced with the original ones included in the paper to verify that the scripts ran successfully.
@@ -99,7 +99,7 @@ You can compare the figures and tables you produced with the original ones inclu
 
 #### Examining the Core Algorithms (Reference Implementations)
 
-Before running the full system experiments on the test cluster, you can examine Requalizer's core algorithms using the Python reference implementations in this repository. These scripts extract the core algorithmic logic out of the middleware (written in C#), allowing you to examine the contributions without needing to spin up a test cluster. 
+Without running the full system experiments on the test cluster, you can examine Requalizer's core algorithms using the Python reference implementations in this repository. These scripts extract the core algorithmic logic out of the middleware (written in C#), allowing you to examine the contributions without needing to spin up a test cluster. 
 
 The reference scripts are located in `/root/requalizer/scripts/experiment/`. To run them, activate the Python virtual environment (if you have not already):
 ```bash
@@ -129,12 +129,18 @@ If you run the AAL application in `aware` mode (`python cp-scheduler.py --app AA
 
 This correctly mirrors the behavior described in **Section 4.3 (Workload Placement)**, proving that the Constraint Programming (CP) formulation mathematically guarantees strict DIFT compliance and resilience prior to deployment.
 
-**2. DIFT-Aware Load Balancing (`load-balancer-advanced.py`)**
+**2. DIFT-Aware Load Balancing (`load-balancer.py`)**
 This script implements the Mixed-Integer Linear Program (MILP) formulation of the DIFT-aware Load Balancer (Algorithm 1, Section 4.4). It calculates routing flow to guarantee minimum replica availability ($c$) for failure tolerance without violating DIFT rules.
 ```bash
 # Calculate flow matrices ensuring a minimum redundancy of 2 active routes per label
-python load-balancer-advanced.py --redundancy 2
+python load-balancer.py --redundancy 2
 ```
+
+**Interpreting the Load Balancer Output**
+If you run the load balancer script, you will see a computed routing Flow Matrix:
+* **The Setup**: Unlike the other scripts, this script uses arbitrary abstract labels (`W`, `X`, `Y`, `Z`) instead of the paper's specific `patient`/`internal`/`public` labels. This serves to demonstrate the mathematical generality of the algorithm regardless of the specific tag ontology.
+* **The Problem**: The middleware needs to route continuous message streams from sources to sinks. It must balance the load evenly across available sinks (satisfying demand proportions) while strictly obeying the isolation rules (e.g., `X` data can only flow to `X` and `Z` sinks, but never `Y`).
+* **The Solution**: The computed matrix mathematically proves the **Availability Objective** defined in the paper. By running it with `--redundancy 2` ($c=2$), the solver forces the flow matrix to distribute every message type across *at least two* valid sinks. This guarantees that if a single sink node crashes during dynamic conditions (Experiment 2), the system can seamlessly fall back to the redundant active route without ever violating DIFT rules. 
 
 **3. Dataflow & Correctness Simulator (`dift-simulator.py`)**
 This discrete-event simulator validates Requalizer's routing mechanisms and label propagation (RQ2: Correctness). It evaluates different node architectures under dynamic conditions, allowing you to observe the exact routing decisions and dataflow behavior.
