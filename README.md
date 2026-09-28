@@ -153,6 +153,15 @@ python dift-simulator.py --app AAL --mode 'aware stable' --messages 10000
 python dift-simulator.py --app SPG --mode 'unaware congestion' --messages 10000
 ```
 
+**Interpreting the Simulator Output**
+If you run the discrete-event simulator (`python dift-simulator.py --app AAL --mode 'aware stable' --messages 10000`), you will see a detailed Node Statistics table:
+* **The Setup**: The simulator constructs the full application graph (e.g., AAL) and feeds 10,000 generated messages with random labels (`LOW`, `MEDIUM`, `HIGH`) into the entry point. The messages then flow downstream according to the rules of the selected `mode` architecture.
+* **The Problem**: We need to verify the correctness of the dynamic label propagation (RQ2). Specifically, we must ensure that no sensitive data ever "leaks" into an unauthorized component, even during complex dataflow paths or dynamic network conditions (like crashes or congestion).
+* **The Solution**: The output table displays the exact label distribution processed by each node in the topology. You can interpret the correctness by verifying the columns:
+  * **Violations**: A DIFT violation occurs when a message with a higher sensitivity label ends up in a component restricted to a lower clearance. For example, if you see `HIGH` messages appearing in the distribution column for `Notifier 4` (which has a `LOW` Sec Label), that is a direct violation.
+  * When running `aware` modes, Requalizer's DIFT-aware Load Balancers dynamically inspect and route labels, guaranteeing zero violations across all components.
+  * When running `unaware` modes, standard load balancers route blindly, resulting in clear, observable violations where `HIGH` messages leak into `LOW` sinks.
+
 
 #### Running Experiment 1: Efficiency and Correctness (Stable Conditions)
 
