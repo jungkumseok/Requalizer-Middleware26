@@ -107,25 +107,44 @@ The reference scripts are located in `/root/requalizer/scripts/experiment/`. To 
 source ../presentation/.venv/bin/activate
 ```
 
-**1. Workload Placement / Scheduling (`scheduler.py`)**
+**1. Workload Placement / Scheduling (`cp-scheduler.py`)**
 This script demonstrates the dataflow-aware workload placement strategy (Section 4.3). It uses Google OR-Tools Constraint Programming to map predictive services to physical hosts, optimizing for bandwidth and latency while strictly adhering to DIFT isolation tags and group anti-affinity.
+You can test the scheduling decisions for different applications (AAL, FD, SPG) in aware or unaware modes, or run a scalability test.
 ```bash
-# Run the scheduler for a 16-node cluster with 10 parallel services
-python scheduler.py --hosts 16 --services 10
+# Run the scheduler for the Ambient Assisted Living (AAL) topology
+python cp-scheduler.py --app AAL --mode aware
+
+# Or run the scalability test for a 16-node cluster with 10 parallel services
+python cp-scheduler.py --app SCALE --hosts 16 --services 10
 ```
 
-**2. DIFT-Aware Load Balancing (`load-balancer.py`)**
+**Interpreting the Scheduler Output (AAL Example)**
+If you run the AAL application in `aware` mode (`python cp-scheduler.py --app AAL --mode aware`), you can observe Requalizer's algorithms in action:
+* **The Host Setup**: The script models an 8-node edge-to-cloud cluster. Hosts 0-2 are in the `public` zone, 3-5 are `internal` cloud servers, and 6-7 are edge devices located at the `patient`'s home (equipped with specific sensors like `camera` or `wearable`).
+* **The Scheduling Problem**: We must place 11 microservices of the AAL pipeline onto these 8 hosts. The placement must respect resource limits (CPU/RAM), network topology (bandwidth/latency), and most importantly, the DIFT isolation rules (e.g., highly sensitive patient video data cannot be processed on a `public` node). Furthermore, the 4 instances of the `Notifier` service belong to a replica group and must be spread across different hosts to ensure resilience (anti-affinity).
+* **The Solution**: The OR-Tools solver outputs an optimal placement mapping. You will observe that:
+  * `VideoCamera` and `Wearable` are strictly pinned to Hosts 6 and 7 (the edge devices with the matching hardware and `patient` tags).
+  * Sensitive processing components like `AIDoctor` and `RecordManager` are strictly isolated to the `internal` cloud nodes (Hosts 3, 4, or 5).
+  * The `Notifier` replicas are successfully distributed across distinct hosts (solving the anti-affinity constraint for high availability) while individually respecting their distinct clearance levels (e.g., `Notifier 4`, which handles non-sensitive aggregate statistics, is allowed to run on a `public` Host like 0 or 1).
+
+This correctly mirrors the behavior described in **Section 4.3 (Workload Placement)**, proving that the Constraint Programming (CP) formulation mathematically guarantees strict DIFT compliance and resilience prior to deployment.
+
+**2. DIFT-Aware Load Balancing (`load-balancer-advanced.py`)**
 This script implements the Mixed-Integer Linear Program (MILP) formulation of the DIFT-aware Load Balancer (Algorithm 1, Section 4.4). It calculates routing flow to guarantee minimum replica availability ($c$) for failure tolerance without violating DIFT rules.
 ```bash
 # Calculate flow matrices ensuring a minimum redundancy of 2 active routes per label
-python load-balancer.py --redundancy 2
+python load-balancer-advanced.py --redundancy 2
 ```
 
-**3. Dataflow & Correctness Simulator (`dataflow-simulator.py`)**
-This discrete-event simulator validates Requalizer's routing mechanisms and label propagation (RQ2: Correctness). It models the full application topologies (e.g., AAL, FD) and evaluates different node architectures under dynamic conditions, allowing you to observe the exact routing decisions and dataflow behavior.
+**3. Dataflow & Correctness Simulator (`dift-simulator.py`)**
+This discrete-event simulator validates Requalizer's routing mechanisms and label propagation (RQ2: Correctness). It evaluates different node architectures under dynamic conditions, allowing you to observe the exact routing decisions and dataflow behavior.
+You can simulate any of the three applications (AAL, FD, SPG) across different dynamic conditions (`aware stable`, `unaware stable`, `unaware crash`, `unaware congestion`).
 ```bash
 # Simulate 10,000 messages through the AAL topology with DIFT-aware routing
-python dataflow-simulator.py --app AAL --mode aware --messages 10000
+python dift-simulator.py --app AAL --mode 'aware stable' --messages 10000
+
+# Simulate the Smart Power Grid (SPG) topology under network congestion without DIFT awareness
+python dift-simulator.py --app SPG --mode 'unaware congestion' --messages 10000
 ```
 
 
