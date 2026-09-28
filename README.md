@@ -44,6 +44,7 @@ docker run -it --name requalizer-exp jungkumseok/requalizer:middleware26 /bin/ba
 docker run -it --name requalizer-exp --mount type=bind,source=/home/user/requalizer-output,target=/root/output jungkumseok/requalizer:middleware26 /bin/bash
 ```
 
+---
 
 ### Reproducing the Experiments
 
@@ -96,6 +97,7 @@ docker cp requalizer-exp:/root/requalizer/scripts/presentation/latency-histogram
 
 You can compare the figures and tables you produced with the original ones included in the paper to verify that the scripts ran successfully.
 
+---
 
 #### Examining the Core Algorithms (Reference Implementations)
 
@@ -162,6 +164,7 @@ If you run the discrete-event simulator (`python dift-simulator.py --app AAL --m
   * When running `aware` modes, Requalizer's DIFT-aware Load Balancers dynamically inspect and route labels, guaranteeing zero violations across all components.
   * When running `unaware` modes, standard load balancers route blindly, resulting in clear, observable violations where `HIGH` messages leak into `LOW` sinks.
 
+---
 
 #### Running Experiment 1: Efficiency and Correctness (Stable Conditions)
 
